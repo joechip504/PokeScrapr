@@ -100,7 +100,6 @@ class PokeScrapr(object):
 
         schema = ["national_id", "type", "species", "height", "weight"]
 
-
         
         ### TODO gonna have to be manually set up so types is a list, others are strings
         for row in rows:
@@ -114,7 +113,6 @@ class PokeScrapr(object):
 
         :param pokemon: The name of the pokmeon to look up.
         :type pokemon: str.
-
         '''
         soup = self.get_pokedex_soup(pokemon)
         table = soup.find_all('table')[3]
@@ -125,6 +123,21 @@ class PokeScrapr(object):
 
         print( [[i,j] for i,j in zip(schema, stats[1:])])
 
+    def get_pokedex_entry(self, pokemon):
+        '''Returns the red/blue pokedex entry of a pokemon.
+
+        :param pokemon: The name of the pokemon to look up.
+        :type pokemon: str.
+        :rtype string:
+        '''
+        soup = self.get_pokedex_soup(pokemon)
+        table = soup.find_all('table')[6]
+
+        # Gen 1 is the first entry in the table, so no need for a find_all here
+        entry = table.tr.text
+        entry = entry.strip().split()[1:]
+        return(' '.join(entry))
+
 if __name__ == '__main__':
     Scraper = PokeScrapr()
     '''
@@ -133,7 +146,7 @@ if __name__ == '__main__':
         pprint(Scraper.get_moves(pokemon, moveset = "natural"))
         print()
     '''
-    Scraper.get_pokedex_data("bulbasaur")
+    Scraper.get_pokedex_entry("bulbasaur")
 
 
 
