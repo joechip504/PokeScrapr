@@ -1,19 +1,40 @@
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 from pprint import pprint
 
 class PokeScrapr(object):
+    '''Existing Pokemon APIs lack support for generation 1, so
+    we're scraping the data instead. 
+    '''
 
-    BASE_URL = "http://pokemondb.net/pokedex/{}/moves/1" 
+    BASE_POKEDEX_URL   = "http://pokemondb.net/pokedex/{}" 
 
     def __init__(self):
         '''Construct a new PokeScrapr. For now, the constructor takes no 
         arguments'''
-        pass
+        self.cache = {}
+        
+
+    def get_pokedex_soup(self, pokemon):
+        '''We're going to need to scrape a bunch of information off each page in 
+        the pokedex. Better to just make one HTTP request and pass the soup around.
+        '''
+        if (pokemon in self.cache):
+            return cache.get(pokemon)
+
+        url  = self.BASE_POKEDEX_URL.format(pokemon)
+        r    = requests.get(url)
+        soup =  BeautifulSoup(r.text)
+
+        self.cache[pokemon] = soup
+        return soup
 
     def get_moves(self, pokemon, moveset = "natural"):
         '''Returns a list of 2 element lists, corresponding to 
         level, move_name pairs.
+
+        Unfortunately, since the moves for gen 1 are on a seperate page,
+        we'll have to make a second HTTP request
 
         >>> scraper = PokeScrapr()
         >>> scraper.get_moves("bulbasaur", moveset = "natural")
@@ -35,7 +56,7 @@ class PokeScrapr(object):
         
         '''
 
-        url  = self.BASE_URL.format(pokemon)
+        url  = self.BASE_POKEDEX_URL.format(pokemon) + '/moves/1'
         r    = requests.get(url)
         soup = BeautifulSoup(r.text)
 
@@ -59,14 +80,40 @@ class PokeScrapr(object):
         # can easily extend this    
         return [ move[:2] for move in all_moves if move ]
 
+    def get_evolution_sequence(self, pokemon):
+        ''' Returns an evolution sequence, where a 
+        sequence is a list of pokemon names.
 
+        :returns list: The evolution sequence
+        '''
+
+
+        soup = self.get_pokedex_soup(pokemon)
+        sequence = soup.find('div', {'class': 'infocard-evo-list'})
+        for s in sequence:
+            print(s)
+
+    def get_pokedex_data(self, pokemon):
+        soup = self.get_pokedex_soup(pokemon)
+        table = soup.find_all('table')[0]
+        rows = table.find_all('tr')
+        
+        ### TODO gonna have to be manually set up so types is a list, others are strings
+        for row in rows:
+            key   = [e.text for e in row.find_all('th')][0].strip().split()[0]
+            entry = [e.text for e in row.find_all('td')][0].strip()
+            print(key,entry)
+
+            
 if __name__ == '__main__':
     Scraper = PokeScrapr()
+    '''
     for pokemon in ["bulbasaur", "squirtle", "charmander"]:
         print(pokemon.upper())
         pprint(Scraper.get_moves(pokemon, moveset = "natural"))
         print()
-
+    '''
+    Scraper.get_pokedex_data("bulbasaur")
 
 
 
