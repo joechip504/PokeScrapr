@@ -104,7 +104,16 @@ class PokeScrapr(object):
             entry = [e.text for e in row.find_all('td')][0].strip()
             print(key,entry)
 
-            
+    def get_base_stats(self, pokemon):
+        soup = self.get_pokedex_soup(pokemon)
+        table = soup.find_all('table')[3]
+        rows = table.find_all('tr')
+
+        schema = ["hp", "attack", "defense", "special_attack", "special_defense", "speed"]
+        stats = [row.find('td').text for row in rows if row.find('td')]
+
+        print( [[i,j] for i,j in zip(schema, stats[1:])])
+
 if __name__ == '__main__':
     Scraper = PokeScrapr()
     '''
@@ -113,7 +122,7 @@ if __name__ == '__main__':
         pprint(Scraper.get_moves(pokemon, moveset = "natural"))
         print()
     '''
-    Scraper.get_pokedex_data("bulbasaur")
+    Scraper.get_base_stats("bulbasaur")
 
 
 
