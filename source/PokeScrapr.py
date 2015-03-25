@@ -1,5 +1,5 @@
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 from pprint import pprint
 
 class PokeScrapr(object):
@@ -12,11 +12,29 @@ class PokeScrapr(object):
     def __init__(self):
         '''Construct a new PokeScrapr. For now, the constructor takes no 
         arguments'''
-        pass
+        self.cache = {}
+        
+
+    def get_pokedex_soup(self, pokemon):
+        '''We're going to need to scrape a bunch of information off each page in 
+        the pokedex. Better to just make one HTTP request and pass the soup around.
+        '''
+        if (pokemon in self.cache):
+            return cache.get(pokemon)
+
+        url  = self.BASE_POKEDEX_URL.format(pokemon)
+        r    = requests.get(url)
+        soup =  BeautifulSoup(r.text)
+
+        self.cache[pokemon] = soup
+        return soup
 
     def get_moves(self, pokemon, moveset = "natural"):
         '''Returns a list of 2 element lists, corresponding to 
         level, move_name pairs.
+
+        Unfortunately, since the moves for gen 1 are on a seperate page,
+        we'll have to make a second HTTP request
 
         >>> scraper = PokeScrapr()
         >>> scraper.get_moves("bulbasaur", moveset = "natural")
@@ -63,23 +81,19 @@ class PokeScrapr(object):
         return [ move[:2] for move in all_moves if move ]
 
     def get_evolution_sequence(self, pokemon):
-        ''' Returns a list of evolution sequences, where each 
-        sequence is a list of pokemon names. We can load all evolution
-        sequences with just one HTTP request here.
+        ''' Returns an evolution sequence, where a 
+        sequence is a list of pokemon names.
 
-        :returns list: The list of evolution sequences.
+        :returns list: The evolution sequence
         '''
-        url  = self.BASE_POKEDEX_URL.format(pokemon)
-        r    = requests.get(url)
-        soup = BeautifulSoup(r.text)
 
-        print(soup.find('div', {'class': 'infocard-evo-list'}))
 
-        '''
-        while (ele['class'] == ['infocard-evo-list']):
-            ele = ele.findNext()
-            print('hi')
-        '''
+        soup = self.get_pokedex_soup(pokemon)
+        sequence = soup.find('div', {'class': 'infocard-evo-list'})
+        for s in sequence:
+            print(s)
+
+
 if __name__ == '__main__':
     Scraper = PokeScrapr()
     '''
