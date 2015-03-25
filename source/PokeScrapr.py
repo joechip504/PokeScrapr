@@ -7,12 +7,32 @@ class PokeScrapr(object):
     BASE_URL = "http://pokemondb.net/pokedex/{}/moves/1" 
 
     def __init__(self):
-        ''' maybe pass in a list of pokemon to scrape '''
+        '''Construct a new PokeScrapr. For now, the constructor takes no 
+        arguments'''
         pass
 
-    def getMoves(self, pokemon, moveset = "natural"):
-        '''
-        Can pass in "natural, hm, or tm"
+    def get_moves(self, pokemon, moveset = "natural"):
+        '''Returns a list of 2 element lists, corresponding to 
+        level, move_name pairs.
+
+        >>> scraper = PokeScrapr()
+        >>> scraper.get_moves("bulbasaur", moveset = "natural")
+        [['1', 'Growl'],
+         ['1', 'Tackle'],
+         ['7', 'Leech Seed'],
+         ['13', 'Vine Whip'],
+         ['20', 'Poison Powder'],
+         ['27', 'Razor Leaf'],
+         ['34', 'Growth'],
+         ['41', 'Sleep Powder'],
+         ['48', 'Solar Beam']]
+
+        :param pokemon: The name of the pokemon to look up.
+        :type pokemon: str.
+        :param moveset: The moveset to look up (natural, tm, hm).
+        :type moveset: str.
+        :returns: list.
+        
         '''
 
         url  = self.BASE_URL.format(pokemon)
@@ -44,7 +64,7 @@ if __name__ == '__main__':
     Scraper = PokeScrapr()
     for pokemon in ["bulbasaur", "squirtle", "charmander"]:
         print(pokemon.upper())
-        pprint(Scraper.getMoves(pokemon, moveset = "tm"))
+        pprint(Scraper.get_moves(pokemon, moveset = "natural"))
         print()
 
 
