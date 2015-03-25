@@ -13,7 +13,7 @@ class TestPokeScrapr(unittest.TestCase):
                str(type(self.Scrapr)))
 
     def test_getMovesLearntByLevelUp(self):
-        moves = self.Scrapr.getMoves(self.test_pokemon_1, moveset = "natural")
+        moves = self.Scrapr.get_moves(self.test_pokemon_1, moveset = "natural")
         pprint(moves)
 
 
