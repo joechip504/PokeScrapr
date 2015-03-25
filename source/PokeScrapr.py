@@ -16,7 +16,7 @@ class PokeScrapr(object):
         level, move_name pairs.
 
         >>> scraper = PokeScrapr()
-        >>> scraper.getMoves("bulbasaur", moveset = "natural")
+        >>> scraper.get_moves("bulbasaur", moveset = "natural")
         [['1', 'Growl'],
          ['1', 'Tackle'],
          ['7', 'Leech Seed'],
