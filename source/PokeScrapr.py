@@ -97,6 +97,10 @@ class PokeScrapr(object):
         soup = self.get_pokedex_soup(pokemon)
         table = soup.find_all('table')[0]
         rows = table.find_all('tr')
+
+        schema = ["national_id", "type", "species", "height", "weight"]
+
+
         
         ### TODO gonna have to be manually set up so types is a list, others are strings
         for row in rows:
@@ -105,6 +109,13 @@ class PokeScrapr(object):
             print(key,entry)
 
     def get_base_stats(self, pokemon):
+        '''Returns the hp, attack, defense, special_attack, special_defense, 
+        and speed of a pokemon.
+
+        :param pokemon: The name of the pokmeon to look up.
+        :type pokemon: str.
+
+        '''
         soup = self.get_pokedex_soup(pokemon)
         table = soup.find_all('table')[3]
         rows = table.find_all('tr')
@@ -122,7 +133,7 @@ if __name__ == '__main__':
         pprint(Scraper.get_moves(pokemon, moveset = "natural"))
         print()
     '''
-    Scraper.get_base_stats("bulbasaur")
+    Scraper.get_pokedex_data("bulbasaur")
 
 
 
