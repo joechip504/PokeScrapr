@@ -93,7 +93,18 @@ class PokeScrapr(object):
         for s in sequence:
             print(s)
 
+    def get_pokedex_data(self, pokemon):
+        soup = self.get_pokedex_soup(pokemon)
+        table = soup.find_all('table')[0]
+        rows = table.find_all('tr')
+        
+        ### TODO gonna have to be manually set up so types is a list, others are strings
+        for row in rows:
+            key   = [e.text for e in row.find_all('th')][0].strip().split()[0]
+            entry = [e.text for e in row.find_all('td')][0].strip()
+            print(key,entry)
 
+            
 if __name__ == '__main__':
     Scraper = PokeScrapr()
     '''
@@ -102,7 +113,7 @@ if __name__ == '__main__':
         pprint(Scraper.get_moves(pokemon, moveset = "natural"))
         print()
     '''
-    Scraper.get_evolution_sequence("bulbasaur")
+    Scraper.get_pokedex_data("bulbasaur")
 
 
 
