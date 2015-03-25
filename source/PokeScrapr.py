@@ -3,8 +3,11 @@ from bs4 import BeautifulSoup
 from pprint import pprint
 
 class PokeScrapr(object):
+    '''Existing Pokemon APIs lack support for generation 1, so
+    we're scraping the data instead. 
+    '''
 
-    BASE_URL = "http://pokemondb.net/pokedex/{}/moves/1" 
+    BASE_POKEDEX_URL   = "http://pokemondb.net/pokedex/{}" 
 
     def __init__(self):
         '''Construct a new PokeScrapr. For now, the constructor takes no 
@@ -35,7 +38,7 @@ class PokeScrapr(object):
         
         '''
 
-        url  = self.BASE_URL.format(pokemon)
+        url  = self.BASE_POKEDEX_URL.format(pokemon) + '/moves/1'
         r    = requests.get(url)
         soup = BeautifulSoup(r.text)
 
@@ -59,14 +62,33 @@ class PokeScrapr(object):
         # can easily extend this    
         return [ move[:2] for move in all_moves if move ]
 
+    def get_evolution_sequence(self, pokemon):
+        ''' Returns a list of evolution sequences, where each 
+        sequence is a list of pokemon names. We can load all evolution
+        sequences with just one HTTP request here.
 
+        :returns list: The list of evolution sequences.
+        '''
+        url  = self.BASE_POKEDEX_URL.format(pokemon)
+        r    = requests.get(url)
+        soup = BeautifulSoup(r.text)
+
+        print(soup.find('div', {'class': 'infocard-evo-list'}))
+
+        '''
+        while (ele['class'] == ['infocard-evo-list']):
+            ele = ele.findNext()
+            print('hi')
+        '''
 if __name__ == '__main__':
     Scraper = PokeScrapr()
+    '''
     for pokemon in ["bulbasaur", "squirtle", "charmander"]:
         print(pokemon.upper())
         pprint(Scraper.get_moves(pokemon, moveset = "natural"))
         print()
-
+    '''
+    Scraper.get_evolution_sequence("bulbasaur")
 
 
 
