@@ -84,18 +84,44 @@ class PokeScrapr(object):
         # can easily extend this    
         return [ move[:2] for move in all_moves if move ]
 
+
     def get_evolution_sequence(self, pokemon):
         ''' Returns an evolution sequence, where a 
-        sequence is a list of pokemon names.
+        sequence is a list of [pokemon_name, evolution_mechanism, evolved_pokemon_name].
+
+        TODO fix eevee (and other edge cases if they exist)
 
         :returns list: The evolution sequence
         '''
 
 
         soup = self._get_pokedex_soup(pokemon)
-        sequence = soup.find('div', {'class': 'infocard-evo-list'})
-        for s in sequence:
-            print(s)
+        sequence = soup.find_all('div', {'class': 'infocard-evo-list'})[0]
+        pokemon_sequence = sequence.find_all('span', {'class' : 'infocard-tall'})
+        evolution_info = sequence.find_all('span', {'class' : 'infocard-tall small'})
+
+        pokemon_names, evolution_mechanisms = [], []
+
+        for p in pokemon_sequence:
+            pokemon = p.find('a', {'class' : 'ent-name'})
+
+            if pokemon:
+                pokemon_names.append(pokemon.text)
+
+        for e in evolution_info:
+            evolution_mechanisms.append(
+                (e.br.text.strip().replace('(', '').replace(')', '')))
+
+        evolution_mechanisms.append("FULLY_EVOLVED")
+
+        evolution_tuples = [[i,j] for i,j in zip(pokemon_names, evolution_mechanisms)]
+
+        for i in range(len(evolution_tuples) - 1):
+            evolution_tuples[i].append(pokemon_names[i+1])
+
+        evolution_tuples[-1].append("NONE")
+        return evolution_tuples
+            
 
     def get_pokedex_data(self, pokemon):
         soup = self._get_pokedex_soup(pokemon)
@@ -152,7 +178,7 @@ class PokeScrapr(object):
 
         :param pokemon: The name of the pokemon to look up.
         :type pokemon: str.
-        :rtype string:
+        :returns string:
         '''
         soup = self._get_pokedex_soup(pokemon)
         table = soup.find_all('table')[6]
@@ -162,6 +188,49 @@ class PokeScrapr(object):
         entry = entry.strip().split()[1:]
         return(' '.join(entry))
 
+    def _get_dict_for_FSP_JSON(self, pokemon):
+        d = {}
+        return d
+
+    def get_FSP_JSON(self, pokemon):
+        '''Returns a JSON formatted string compatible with math.js in 
+        fullscreenpokemon.
+
+        :param pokemon: The name of the pokemon to look up.
+        :type pokemon: str.
+        :returns string:
+        '''
+
+        output = '''
+        "{pokemon_name}": {
+            "label": {species},
+            "sprite": "water",
+            "info": [
+                    {pokedex_entry}
+            ]
+            "number": {national_id},
+            "height": {height},
+            "weight": {weight},
+            "types": {types},
+            "HP": {hp}, 
+            "Attack": {attack}, 
+            "Defense": {defense},
+            "Special": {special_attack}, 
+            "Speed": {speed}, 
+            "moves": {
+                "natural": [
+                    {natural_moves}
+                ], 
+                "hm": [
+                    {hm_moves}
+                ],
+                "tm": [
+                {tm_moves}
+                ]
+            }
+        }
+        '''
+
 if __name__ == '__main__':
     Scraper = PokeScrapr()
     '''
@@ -170,7 +239,7 @@ if __name__ == '__main__':
         pprint(Scraper.get_moves(pokemon, moveset = "natural"))
         print()
     '''
-    pprint(Scraper.get_pokedex_data("bulbasaur"))
+    pprint(Scraper.get_evolution_sequence("pikachu"))
 
 
 
