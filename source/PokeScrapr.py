@@ -168,6 +168,7 @@ class PokeScrapr(object):
 
     def get_pokedex_entry(self, pokemon):
         '''Returns the red/blue pokedex entry of a pokemon.
+        THIS IS BUGGY
 
         :param pokemon: The name of the pokemon to look up.
         :type pokemon: str.
@@ -185,9 +186,12 @@ class PokeScrapr(object):
         updated_moves = [ {"level" : int(m[0]), "Move": m[1]} for m in moveset]
         return updated_moves
 
-    def _get_dict_for_FSP_JSON(self, pokemon):
+    def get_all_data(self, pokemon):
         # Set up storage container.
         d = {}
+
+        # name
+        d['pokemon_name'] = pokemon
 
         # Scrape all the data
         pokedex_entry        = self.get_pokedex_entry(pokemon)
@@ -201,6 +205,11 @@ class PokeScrapr(object):
         # national_id, types, species, height, weight
         for i in ['national_id', 'types', 'species', 'height', 'weight']:
             d[i] = pokedex_data[i]
+
+        # break up height into feet, inches
+        d['feet'] = d['height'][0]
+        d['inches'] = d['height'][1]
+
 
         # hp, attack, defense, special_attack, special_defense, speed
         for i in ['hp', 'attack', 'defense', 'special_attack',
@@ -237,16 +246,16 @@ class PokeScrapr(object):
         '''
 
         output = '''
-        "{pokemon_name}": {
+        "{pokemon_name}": {{
             "label": {species},
             "sprite": "water",
             "info": [
                     {pokedex_entry}
             ]
-            "evolvesInto" : {evolvesInto},
-            "evolvesVia" : {evolvesVia},
+            "evolvesInto" : "{evolvesInto}",
+            "evolvesVia" : "{evolvesVia}",
             "number": {national_id},
-            "height": {height},
+            "height": ["{feet}", "{inches}"],
             "weight": {weight},
             "types": {types},
             "HP": {hp}, 
@@ -254,14 +263,16 @@ class PokeScrapr(object):
             "Defense": {defense},
             "Special": {special_attack}, 
             "Speed": {speed}, 
-            "moves": {
+            "moves": {{
                 "natural": {natural_moves}, 
                 "hm": {hm_moves},
                 "tm": {tm_moves}
-            }
-        }
+            }}
+        }}
         '''
-        return output
+
+        kwargs = self.get_all_data(pokemon)
+        return output.format(**kwargs).replace("'", '"')
 
 if __name__ == '__main__':
     Scraper = PokeScrapr()
@@ -272,9 +283,10 @@ if __name__ == '__main__':
         print()
     '''
     #pprint(Scraper.get_pokedex_data("pikachu"))
-    pprint(Scraper._get_dict_for_FSP_JSON("Squirtle"))
     #pprint(Scraper.get_FSP_JSON("squirtle"))
     #pprint(Scraper.get_base_stats("pikachu"))
+    #print(Scraper.get_FSP_JSON("Pikachu"))
+    print(Scraper.get_pokedex_entry("charizard"))
 
 
 
