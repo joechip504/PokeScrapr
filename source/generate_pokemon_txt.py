@@ -6,4 +6,5 @@ with open('pokemon.txt', 'w') as f:
 	soup = BeautifulSoup(r.get(url).text)
 	all_pokemon = soup.find('div', {'class' : 'infocard-tall-list'})
 	for p in all_pokemon.find_all('span', {'infocard-tall'}):
-		f.write(p.find('a', {'class' : 'ent-name'}).text + '\n')
+		link = p.find('a', {'class' : 'ent-name'}).get('href').split('/')[-1]
+		f.write(link + '\n')
