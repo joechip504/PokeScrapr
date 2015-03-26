@@ -1,4 +1,5 @@
 import requests
+import json
 from bs4 import BeautifulSoup, NavigableString
 from pprint import pprint
 
@@ -24,7 +25,7 @@ class PokeScrapr(object):
         will still only take one HTTP request.
         '''
         if (pokemon in self.cache):
-            return cache.get(pokemon)
+            return self.cache.get(pokemon)
 
         url  = self.BASE_POKEDEX_URL.format(pokemon)
         r    = requests.get(url)
@@ -42,15 +43,7 @@ class PokeScrapr(object):
 
         >>> scraper = PokeScrapr()
         >>> scraper.get_moves("bulbasaur", moveset = "natural")
-        [['1', 'Growl'],
-         ['1', 'Tackle'],
-         ['7', 'Leech Seed'],
-         ['13', 'Vine Whip'],
-         ['20', 'Poison Powder'],
-         ['27', 'Razor Leaf'],
-         ['34', 'Growth'],
-         ['41', 'Sleep Powder'],
-         ['48', 'Solar Beam']]
+
 
         :param pokemon: The name of the pokemon to look up.
         :type pokemon: str.
@@ -84,18 +77,44 @@ class PokeScrapr(object):
         # can easily extend this    
         return [ move[:2] for move in all_moves if move ]
 
+
     def get_evolution_sequence(self, pokemon):
         ''' Returns an evolution sequence, where a 
-        sequence is a list of pokemon names.
+        sequence is a list of [pokemon_name, evolution_mechanism, evolved_pokemon_name].
+
+        TODO fix eevee (and other edge cases if they exist)
 
         :returns list: The evolution sequence
         '''
 
 
         soup = self._get_pokedex_soup(pokemon)
-        sequence = soup.find('div', {'class': 'infocard-evo-list'})
-        for s in sequence:
-            print(s)
+        sequence = soup.find_all('div', {'class': 'infocard-evo-list'})[0]
+        pokemon_sequence = sequence.find_all('span', {'class' : 'infocard-tall'})
+        evolution_info = sequence.find_all('span', {'class' : 'infocard-tall small'})
+
+        pokemon_names, evolution_mechanisms = [], []
+
+        for p in pokemon_sequence:
+            pokemon = p.find('a', {'class' : 'ent-name'})
+
+            if pokemon:
+                pokemon_names.append(pokemon.text)
+
+        for e in evolution_info:
+            evolution_mechanisms.append(
+                (e.br.text.strip().replace('(', '').replace(')', '')))
+
+        evolution_mechanisms.append("FULLY_EVOLVED")
+
+        evolution_tuples = [[i,j] for i,j in zip(pokemon_names, evolution_mechanisms)]
+
+        for i in range(len(evolution_tuples) - 1):
+            evolution_tuples[i].append(pokemon_names[i+1])
+
+        evolution_tuples[-1].append("NONE")
+        return evolution_tuples
+            
 
     def get_pokedex_data(self, pokemon):
         soup = self._get_pokedex_soup(pokemon)
@@ -128,8 +147,8 @@ class PokeScrapr(object):
 
             pokedex_data.append(entry)
 
-        schema = ["national_id", "type", "species", "height", "weight"]
-        return [ [i,j] for i,j in zip(schema, pokedex_data)]
+        schema = ["national_id", "types", "species", "height", "weight"]
+        return { i: j for i,j in zip(schema, pokedex_data) }
 
     def get_base_stats(self, pokemon):
         '''Returns the hp, attack, defense, special_attack, special_defense, 
@@ -145,14 +164,15 @@ class PokeScrapr(object):
         schema = ["hp", "attack", "defense", "special_attack", "special_defense", "speed"]
         stats = [row.find('td').text for row in rows if row.find('td')]
 
-        print( [[i,j] for i,j in zip(schema, stats[1:])])
+        return { i:j for i,j in zip(schema, stats[1:]) }
 
     def get_pokedex_entry(self, pokemon):
         '''Returns the red/blue pokedex entry of a pokemon.
+        THIS IS BUGGY
 
         :param pokemon: The name of the pokemon to look up.
         :type pokemon: str.
-        :rtype string:
+        :returns string:
         '''
         soup = self._get_pokedex_soup(pokemon)
         table = soup.find_all('table')[6]
@@ -162,6 +182,98 @@ class PokeScrapr(object):
         entry = entry.strip().split()[1:]
         return(' '.join(entry))
 
+    def _format_moveset_for_FSP(self, moveset):
+        updated_moves = [ {"level" : int(m[0]), "Move": m[1]} for m in moveset]
+        return updated_moves
+
+    def get_all_data(self, pokemon):
+        # Set up storage container.
+        d = {}
+
+        # name
+        d['pokemon_name'] = pokemon
+
+        # Scrape all the data
+        pokedex_entry        = self.get_pokedex_entry(pokemon)
+        pokedex_data         = self.get_pokedex_data(pokemon)
+        evolution_sequence   = self.get_evolution_sequence(pokemon)
+        base_stats           = self.get_base_stats(pokemon)
+        natural_moves        = self.get_moves(pokemon, moveset = "natural")
+        tm_moves             = self.get_moves(pokemon, moveset = "tm")
+        hm_moves             = self.get_moves(pokemon, moveset = "hm")
+
+        # national_id, types, species, height, weight
+        for i in ['national_id', 'types', 'species', 'height', 'weight']:
+            d[i] = pokedex_data[i]
+
+        # break up height into feet, inches
+        d['feet'] = d['height'][0]
+        d['inches'] = d['height'][1]
+
+
+        # hp, attack, defense, special_attack, special_defense, speed
+        for i in ['hp', 'attack', 'defense', 'special_attack',
+                    'special_defense', 'speed']:
+            d[i] = base_stats[i]
+
+        # pokedex_entry
+        d['pokedex_entry'] = pokedex_entry
+
+        # evolution info
+        for subsequence in evolution_sequence:
+            if subsequence[0] == pokemon:
+                d["evolvesVia"]  = subsequence[1]
+                d["evolvesInto"] = subsequence[2]
+
+        #movesets
+        natural_moves = self._format_moveset_for_FSP(natural_moves)
+        tm_moves      = self._format_moveset_for_FSP(tm_moves)
+        hm_moves      = self._format_moveset_for_FSP(hm_moves)
+
+        d['natural_moves'] = natural_moves
+        d['tm_moves']      = tm_moves
+        d['hm_moves']      = hm_moves
+
+        return d
+
+    def get_FSP_JSON(self, pokemon):
+        '''Returns a JSON formatted string compatible with math.js in 
+        fullscreenpokemon.
+
+        :param pokemon: The name of the pokemon to look up.
+        :type pokemon: str.
+        :returns string:
+        '''
+
+        output = '''
+        "{pokemon_name}": {{
+            "label": {species},
+            "sprite": "water",
+            "info": [
+                    {pokedex_entry}
+            ]
+            "evolvesInto" : "{evolvesInto}",
+            "evolvesVia" : "{evolvesVia}",
+            "number": {national_id},
+            "height": ["{feet}", "{inches}"],
+            "weight": {weight},
+            "types": {types},
+            "HP": {hp}, 
+            "Attack": {attack}, 
+            "Defense": {defense},
+            "Special": {special_attack}, 
+            "Speed": {speed}, 
+            "moves": {{
+                "natural": {natural_moves}, 
+                "hm": {hm_moves},
+                "tm": {tm_moves}
+            }}
+        }}
+        '''
+
+        kwargs = self.get_all_data(pokemon)
+        return output.format(**kwargs).replace("'", '"')
+
 if __name__ == '__main__':
     Scraper = PokeScrapr()
     '''
@@ -170,7 +282,11 @@ if __name__ == '__main__':
         pprint(Scraper.get_moves(pokemon, moveset = "natural"))
         print()
     '''
-    pprint(Scraper.get_pokedex_data("bulbasaur"))
+    #pprint(Scraper.get_pokedex_data("pikachu"))
+    #pprint(Scraper.get_FSP_JSON("squirtle"))
+    #pprint(Scraper.get_base_stats("pikachu"))
+    #print(Scraper.get_FSP_JSON("Pikachu"))
+    print(Scraper.get_pokedex_entry("charizard"))
 
 
 
