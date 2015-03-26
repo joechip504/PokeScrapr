@@ -15,9 +15,13 @@ class PokeScrapr(object):
         self.cache = {}
         
 
-    def get_pokedex_soup(self, pokemon):
+    def _get_pokedex_soup(self, pokemon):
         '''We're going to need to scrape a bunch of information off each page in 
         the pokedex. Better to just make one HTTP request and pass the soup around.
+
+        _get_pokedex_soup caches results in self.cache, so a call to
+        get_evolution_sequence() followed by a call to get_pokedex_entry() 
+        will still only take one HTTP request.
         '''
         if (pokemon in self.cache):
             return cache.get(pokemon)
@@ -88,24 +92,44 @@ class PokeScrapr(object):
         '''
 
 
-        soup = self.get_pokedex_soup(pokemon)
+        soup = self._get_pokedex_soup(pokemon)
         sequence = soup.find('div', {'class': 'infocard-evo-list'})
         for s in sequence:
             print(s)
 
     def get_pokedex_data(self, pokemon):
-        soup = self.get_pokedex_soup(pokemon)
+        soup = self._get_pokedex_soup(pokemon)
         table = soup.find_all('table')[0]
         rows = table.find_all('tr')
+        pokedex_data = []
+
+        for i,row in enumerate(rows):
+            entry = None
+
+            # national_id
+            if i == 0:
+                entry = row.find('td').text.strip()
+
+            # type(s)
+            elif i == 1:
+                entry = row.find('td').text.strip().split()
+
+            # species (pokemon suffix not included)
+            elif i == 2:
+                entry = ' '.join(row.find('td').text.strip().split()[:-1])
+
+            # height [feet, inches]
+            elif i == 3:
+                entry = row.find('td').text.strip().split()[0].strip('″').split('′')
+
+            # weight (lbs)
+            elif i == 4: 
+                entry = row.find('td').text.split()[0].strip()
+
+            pokedex_data.append(entry)
 
         schema = ["national_id", "type", "species", "height", "weight"]
-
-        
-        ### TODO gonna have to be manually set up so types is a list, others are strings
-        for row in rows:
-            key   = [e.text for e in row.find_all('th')][0].strip().split()[0]
-            entry = [e.text for e in row.find_all('td')][0].strip()
-            print(key,entry)
+        return [ [i,j] for i,j in zip(schema, pokedex_data)]
 
     def get_base_stats(self, pokemon):
         '''Returns the hp, attack, defense, special_attack, special_defense, 
@@ -114,7 +138,7 @@ class PokeScrapr(object):
         :param pokemon: The name of the pokmeon to look up.
         :type pokemon: str.
         '''
-        soup = self.get_pokedex_soup(pokemon)
+        soup = self._get_pokedex_soup(pokemon)
         table = soup.find_all('table')[3]
         rows = table.find_all('tr')
 
@@ -130,7 +154,7 @@ class PokeScrapr(object):
         :type pokemon: str.
         :rtype string:
         '''
-        soup = self.get_pokedex_soup(pokemon)
+        soup = self._get_pokedex_soup(pokemon)
         table = soup.find_all('table')[6]
 
         # Gen 1 is the first entry in the table, so no need for a find_all here
@@ -146,7 +170,7 @@ if __name__ == '__main__':
         pprint(Scraper.get_moves(pokemon, moveset = "natural"))
         print()
     '''
-    Scraper.get_pokedex_entry("bulbasaur")
+    pprint(Scraper.get_pokedex_data("bulbasaur"))
 
 
 
