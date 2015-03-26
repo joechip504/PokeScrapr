@@ -175,12 +175,13 @@ class PokeScrapr(object):
         :returns string:
         '''
         soup = self._get_pokedex_soup(pokemon)
-        table = soup.find_all('table')[6]
+        headings = soup.find(id='dex-flavor')
+        table = headings.next_sibling.next_sibling.next_sibling.next_sibling
+        
 
         # Gen 1 is the first entry in the table, so no need for a find_all here
-        entry = table.tr.text
-        entry = entry.strip().split()[1:]
-        return(' '.join(entry))
+        entry = table.tr.td.text
+        return entry
 
     def _format_moveset_for_FSP(self, moveset):
         updated_moves = [ {"level" : int(m[0]), "Move": m[1]} for m in moveset]
@@ -276,17 +277,19 @@ class PokeScrapr(object):
 
 if __name__ == '__main__':
     Scraper = PokeScrapr()
+
     '''
-    for pokemon in ["bulbasaur", "squirtle", "charmander"]:
+    for pokemon in ["bulbasaur", "charizard", "clefairy"]:
         print(pokemon.upper())
-        pprint(Scraper.get_moves(pokemon, moveset = "natural"))
+        pprint(Scraper.get_pokedex_entry(pokemon))
         print()
     '''
+    
     #pprint(Scraper.get_pokedex_data("pikachu"))
     #pprint(Scraper.get_FSP_JSON("squirtle"))
     #pprint(Scraper.get_base_stats("pikachu"))
-    #print(Scraper.get_FSP_JSON("Pikachu"))
-    print(Scraper.get_pokedex_entry("charizard"))
+    print(Scraper.get_FSP_JSON("Pikachu"))
+    #print(Scraper.get_pokedex_entry("charizard"))
 
 
 
