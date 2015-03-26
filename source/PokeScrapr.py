@@ -43,15 +43,7 @@ class PokeScrapr(object):
 
         >>> scraper = PokeScrapr()
         >>> scraper.get_moves("bulbasaur", moveset = "natural")
-        [['1', 'Growl'],
-         ['1', 'Tackle'],
-         ['7', 'Leech Seed'],
-         ['13', 'Vine Whip'],
-         ['20', 'Poison Powder'],
-         ['27', 'Razor Leaf'],
-         ['34', 'Growth'],
-         ['41', 'Sleep Powder'],
-         ['48', 'Solar Beam']]
+
 
         :param pokemon: The name of the pokemon to look up.
         :type pokemon: str.
@@ -189,6 +181,10 @@ class PokeScrapr(object):
         entry = entry.strip().split()[1:]
         return(' '.join(entry))
 
+    def _format_moveset_for_FSP(self, moveset):
+        updated_moves = [ {"level" : int(m[0]), "Move": m[1]} for m in moveset]
+        return updated_moves
+
     def _get_dict_for_FSP_JSON(self, pokemon):
         # Set up storage container.
         d = {}
@@ -202,27 +198,33 @@ class PokeScrapr(object):
         tm_moves             = self.get_moves(pokemon, moveset = "tm")
         hm_moves             = self.get_moves(pokemon, moveset = "hm")
 
-
         # national_id, types, species, height, weight
-        d["national_id"] = pokedex_data["national_id"]
-        d["types"]       = pokedex_data["types"]
-        d["species"]     = pokedex_data["species"]
-        d["height"]      = pokedex_data["height"]
-        d["weight"]      = pokedex_data["weight"]
+        for i in ['national_id', 'types', 'species', 'height', 'weight']:
+            d[i] = pokedex_data[i]
 
         # hp, attack, defense, special_attack, special_defense, speed
-        d["hp"]              = base_stats["hp"]
-        d["attack"]          = base_stats["attack"]
-        d["defense"]         = base_stats["defense"]
-        d["special_attack"]  = base_stats["special_attack"]
-        d["special_defense"] = base_stats["special_defense"]
-        d["speed"]           = base_stats["speed"]
+        for i in ['hp', 'attack', 'defense', 'special_attack',
+                    'special_defense', 'speed']:
+            d[i] = base_stats[i]
 
+        # pokedex_entry
+        d['pokedex_entry'] = pokedex_entry
 
-        # info
-        d["pokedex_entry"] = pokedex_entry
+        # evolution info
+        for subsequence in evolution_sequence:
+            if subsequence[0] == pokemon:
+                d["evolvesVia"]  = subsequence[1]
+                d["evolvesInto"] = subsequence[2]
 
-        print(json.dumps(d))
+        #movesets
+        natural_moves = self._format_moveset_for_FSP(natural_moves)
+        tm_moves      = self._format_moveset_for_FSP(tm_moves)
+        hm_moves      = self._format_moveset_for_FSP(hm_moves)
+
+        d['natural_moves'] = natural_moves
+        d['tm_moves']      = tm_moves
+        d['hm_moves']      = hm_moves
+
         return d
 
     def get_FSP_JSON(self, pokemon):
@@ -241,6 +243,8 @@ class PokeScrapr(object):
             "info": [
                     {pokedex_entry}
             ]
+            "evolvesInto" : {evolvesInto},
+            "evolvesVia" : {evolvesVia},
             "number": {national_id},
             "height": {height},
             "weight": {weight},
@@ -251,15 +255,9 @@ class PokeScrapr(object):
             "Special": {special_attack}, 
             "Speed": {speed}, 
             "moves": {
-                "natural": [
-                    {natural_moves}
-                ], 
-                "hm": [
-                    {hm_moves}
-                ],
-                "tm": [
-                {tm_moves}
-                ]
+                "natural": {natural_moves}, 
+                "hm": {hm_moves},
+                "tm": {tm_moves}
             }
         }
         '''
@@ -274,7 +272,7 @@ if __name__ == '__main__':
         print()
     '''
     #pprint(Scraper.get_pokedex_data("pikachu"))
-    pprint(Scraper._get_dict_for_FSP_JSON("squirtle"))
+    pprint(Scraper._get_dict_for_FSP_JSON("Squirtle"))
     #pprint(Scraper.get_FSP_JSON("squirtle"))
     #pprint(Scraper.get_base_stats("pikachu"))
 
