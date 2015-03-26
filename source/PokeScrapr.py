@@ -2,6 +2,9 @@ import requests
 import json
 from bs4 import BeautifulSoup, NavigableString
 from pprint import pprint
+import sys
+import time
+
 
 class PokeScrapr(object):
     '''Existing Pokemon APIs lack support for generation 1, so
@@ -14,6 +17,7 @@ class PokeScrapr(object):
         '''Construct a new PokeScrapr. For now, the constructor takes no 
         arguments'''
         self.cache = {}
+        self.r = None
         
 
     def _get_pokedex_soup(self, pokemon):
@@ -28,8 +32,10 @@ class PokeScrapr(object):
             return self.cache.get(pokemon)
 
         url  = self.BASE_POKEDEX_URL.format(pokemon)
-        r    = requests.get(url)
-        soup =  BeautifulSoup(r.text)
+        self.r    = requests.get(url)
+        if not self.r.ok:
+            sys.exit('bad request')
+        soup =  BeautifulSoup(self.r.text)
 
         self.cache[pokemon] = soup
         return soup
@@ -63,9 +69,25 @@ class PokeScrapr(object):
                  "tm"      : 2
         }.get(moveset)
 
+        # for whatever reason the website doesn't put in empty tables
+        # in these cases
+        if (pokemon.lower() in ('nidoran-f', 'nidoran-m')):
+            tid = 1
+
         all_moves = []
         tables    = soup.find_all("table")
-        rows      = tables[tid].find_all('tr')
+
+        # check for 'pre-evolution-moves' and skip them
+        table = tables[tid]
+        title = table.previous_sibling.previous_sibling.previous_sibling.previous_sibling
+        if (title.text == 'Pre-evolution moves'):
+            tid += 1
+
+        # Some pokemon, like caterpie, have no hm/tm moves
+        try:
+            rows      = tables[tid].find_all('tr')
+        except:
+            return []
 
 
         for row in rows:
@@ -87,7 +109,6 @@ class PokeScrapr(object):
         :returns list: The evolution sequence
         '''
 
-
         soup = self._get_pokedex_soup(pokemon)
         sequence = soup.find_all('div', {'class': 'infocard-evo-list'})[0]
         pokemon_sequence = sequence.find_all('span', {'class' : 'infocard-tall'})
@@ -99,7 +120,7 @@ class PokeScrapr(object):
             pokemon = p.find('a', {'class' : 'ent-name'})
 
             if pokemon:
-                pokemon_names.append(pokemon.text)
+                pokemon_names.append(pokemon.get('href').split('/')[-1].capitalize())
 
         for e in evolution_info:
             evolution_mechanisms.append(
@@ -221,11 +242,16 @@ class PokeScrapr(object):
         d['pokedex_entry'] = pokedex_entry
 
         # evolution info
+        found = False
         for subsequence in evolution_sequence:
             if subsequence[0] == pokemon:
                 d["evolvesVia"]  = subsequence[1]
                 d["evolvesInto"] = subsequence[2]
+                found = True
 
+        if not found:
+            sys.exit('evolution data not found for {}. {}'.format(
+                pokemon, evolution_sequence))
         #movesets
         natural_moves = self._format_moveset_for_FSP(natural_moves)
         tm_moves      = self._format_moveset_for_FSP(tm_moves)
@@ -246,12 +272,14 @@ class PokeScrapr(object):
         :returns string:
         '''
 
+        pokemon = pokemon.capitalize()
+
         output = '''
         "{pokemon_name}": {{
-            "label": {species},
+            "label": "{species}",
             "sprite": "water",
             "info": [
-                    {pokedex_entry}
+                    "{pokedex_entry}""
             ]
             "evolvesInto" : "{evolvesInto}",
             "evolvesVia" : "{evolvesVia}",
@@ -278,17 +306,16 @@ class PokeScrapr(object):
 if __name__ == '__main__':
     Scraper = PokeScrapr()
 
-    '''
-    for pokemon in ["bulbasaur", "charizard", "clefairy"]:
-        print(pokemon.upper())
-        pprint(Scraper.get_pokedex_entry(pokemon))
-        print()
-    '''
     
+    for pokemon in ["Jigglypuff", "Nidoran-m", "Nidoqueen"]:
+        print(pokemon.upper())
+        pprint(Scraper.get_FSP_JSON(pokemon))
+        time.sleep(3)
+        
     #pprint(Scraper.get_pokedex_data("pikachu"))
     #pprint(Scraper.get_FSP_JSON("squirtle"))
     #pprint(Scraper.get_base_stats("pikachu"))
-    print(Scraper.get_FSP_JSON("Pikachu"))
+    #print(Scraper.get_FSP_JSON("Venusaur"))
     #print(Scraper.get_pokedex_entry("charizard"))
 
 
