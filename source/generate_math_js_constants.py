@@ -30,6 +30,6 @@ with open('pokemon.txt') as f:
 			print(js)
 			output.append(js)	
 
-with open('pokemon-js', 'w') as f:
+with open('pokemon-js.js', 'w') as f:
 	json = jsbeautifier.beautify(','.join(output))
 	f.write(json)

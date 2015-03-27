@@ -219,6 +219,11 @@ class PokeScrapr(object):
 
     def _format_moveset_for_FSP(self, moveset):
         updated_moves = [ {"level" : int(m[0]), "Move": m[1]} for m in moveset]
+
+        # quick hack to force double quotes instead of single quotes
+        updated_moves = '{}'.format(updated_moves)
+        updated_moves = jsbeautifier.beautify(updated_moves).replace("'", '"')               
+
         return updated_moves
 
     def get_all_data(self, pokemon):
@@ -323,8 +328,8 @@ if __name__ == '__main__':
     
     for pokemon in ["Farfetchd", "Nidoran-m", "Nidoqueen"]:
         print(pokemon.upper())
-        print(Scraper.get_FSP_JSON(pokemon))
-        time.sleep(3)
+        moves = Scraper.get_moves(pokemon, moveset='natural')
+        print(Scraper._format_moveset_for_FSP(moves))
         
     #pprint(Scraper.get_pokedex_data("pikachu"))
     #pprint(Scraper.get_FSP_JSON("squirtle"))
