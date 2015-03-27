@@ -1,9 +1,12 @@
 import requests
 import json
-from bs4 import BeautifulSoup, NavigableString
-from pprint import pprint
+import jsbeautifier
 import sys
 import time
+
+from bs4 import BeautifulSoup
+from pprint import pprint
+
 
 
 class PokeScrapr(object):
@@ -78,10 +81,14 @@ class PokeScrapr(object):
         tables    = soup.find_all("table")
 
         # check for 'pre-evolution-moves' and skip them
-        table = tables[tid]
-        title = table.previous_sibling.previous_sibling.previous_sibling.previous_sibling
-        if (title.text == 'Pre-evolution moves'):
-            tid += 1
+        try:
+            table = tables[tid]
+            title = table.previous_sibling.previous_sibling.previous_sibling.previous_sibling
+            if (title.text == 'Pre-evolution moves'):
+                tid += 1
+
+        except:
+            return []
 
         # Some pokemon, like caterpie, have no hm/tm moves
         try:
@@ -110,7 +117,13 @@ class PokeScrapr(object):
         '''
 
         soup = self._get_pokedex_soup(pokemon)
-        sequence = soup.find_all('div', {'class': 'infocard-evo-list'})[0]
+        try:
+            sequence = soup.find_all('div', {'class': 'infocard-evo-list'})[0]
+
+        # Some pokemon (like farfetchd) have no evolution sequence
+        except:
+            return [[pokemon, "Undefined", "Undefined"]]
+
         pokemon_sequence = sequence.find_all('span', {'class' : 'infocard-tall'})
         evolution_info = sequence.find_all('span', {'class' : 'infocard-tall small'})
 
@@ -126,14 +139,14 @@ class PokeScrapr(object):
             evolution_mechanisms.append(
                 (e.br.text.strip().replace('(', '').replace(')', '')))
 
-        evolution_mechanisms.append("FULLY_EVOLVED")
+        evolution_mechanisms.append("Undefined")
 
         evolution_tuples = [[i,j] for i,j in zip(pokemon_names, evolution_mechanisms)]
 
         for i in range(len(evolution_tuples) - 1):
             evolution_tuples[i].append(pokemon_names[i+1])
 
-        evolution_tuples[-1].append("NONE")
+        evolution_tuples[-1].append("Undefined")
         return evolution_tuples
             
 
@@ -301,15 +314,16 @@ class PokeScrapr(object):
         '''
 
         kwargs = self.get_all_data(pokemon)
-        return output.format(**kwargs).replace("'", '"')
+        output = output.format(**kwargs).replace("'", '"')
+        return jsbeautifier.beautify(output)
 
 if __name__ == '__main__':
     Scraper = PokeScrapr()
 
     
-    for pokemon in ["Jigglypuff", "Nidoran-m", "Nidoqueen"]:
+    for pokemon in ["Farfetchd", "Nidoran-m", "Nidoqueen"]:
         print(pokemon.upper())
-        pprint(Scraper.get_FSP_JSON(pokemon))
+        print(Scraper.get_FSP_JSON(pokemon))
         time.sleep(3)
         
     #pprint(Scraper.get_pokedex_data("pikachu"))
