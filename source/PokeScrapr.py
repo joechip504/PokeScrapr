@@ -301,7 +301,7 @@ class PokeScrapr(object):
         output = '''
         "{pokemon_name}": {{
             "label": "{species}",
-            "sprite": "water",
+            "sprite": "Water",
             "info": [
                     "{pokedex_entry}"
             ],
