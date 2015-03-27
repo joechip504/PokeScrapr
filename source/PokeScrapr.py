@@ -314,7 +314,7 @@ class PokeScrapr(object):
         '''
 
         kwargs = self.get_all_data(pokemon)
-        output = output.format(**kwargs).replace("'", '"')
+        output = output.format(**kwargs)
         return jsbeautifier.beautify(output)
 
 if __name__ == '__main__':
