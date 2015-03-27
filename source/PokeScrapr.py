@@ -243,13 +243,19 @@ class PokeScrapr(object):
         hm_moves             = self.get_moves(pokemon, moveset = "hm")
 
         # national_id, types, species, height, weight
-        for i in ['national_id', 'types', 'species', 'height', 'weight']:
+        for i in ['national_id', 'species', 'height', 'weight']:
             d[i] = pokedex_data[i]
 
         # break up height into feet, inches
         d['feet'] = d['height'][0]
         d['inches'] = d['height'][1]
 
+        # force double quotes in types
+        types = pokedex_data['types']
+        for i in range(len(types)):
+            types[i] = '"' + types[i] + '"'
+
+        d['types'] = ','.join(types)
 
         # hp, attack, defense, special_attack, special_defense, speed
         for i in ['hp', 'attack', 'defense', 'special_attack',
@@ -304,7 +310,7 @@ class PokeScrapr(object):
             "number": {national_id},
             "height": ["{feet}", "{inches}"],
             "weight": {weight},
-            "types": {types},
+            "types": [{types}],
             "HP": {hp}, 
             "Attack": {attack}, 
             "Defense": {defense},
@@ -326,10 +332,9 @@ if __name__ == '__main__':
     Scraper = PokeScrapr()
 
     
-    for pokemon in ["Farfetchd", "Nidoran-m", "Nidoqueen"]:
+    for pokemon in ["Weepinbell"]:
         print(pokemon.upper())
-        moves = Scraper.get_moves(pokemon, moveset='natural')
-        print(Scraper._format_moveset_for_FSP(moves))
+        print(Scraper.get_FSP_JSON(pokemon))
         
     #pprint(Scraper.get_pokedex_data("pikachu"))
     #pprint(Scraper.get_FSP_JSON("squirtle"))
