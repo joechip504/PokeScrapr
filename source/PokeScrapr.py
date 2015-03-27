@@ -304,7 +304,7 @@ class PokeScrapr(object):
             "sprite": "water",
             "info": [
                     "{pokedex_entry}"
-            ]
+            ],
             "evolvesInto" : "{evolvesInto}",
             "evolvesVia" : "{evolvesVia}",
             "number": {national_id},
