@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+from jsbeautifier import beautify
 
 class Item(object):
 	'''Represents an item in Pokemon Blue.
@@ -37,6 +38,27 @@ class Item(object):
 		self.name   = kwargs.get('name')
 		self.effect = kwargs.get('effect')
 
+	def __repr__(self):
+		return self.name
+
+	def FSP_JSON(self):
+		output = None
+		kwargs = {'name' : self.name, 'price': self.price, 'effect': self.effect}
+		if (self.price):
+			output = '''{{
+					"name" : "{name}",
+					"price" : "{price}",
+					"effect" : "{effect}"
+					}}
+					'''
+
+		else:
+			output = '''
+					"name" : "{name}",
+					"effect" : "{effect}"
+					'''
+		output = output.format(**kwargs)
+		return beautify(output)
 
 class ItemScrapr(object):
 	'''ItemScrapr is designed to show us: 
@@ -66,7 +88,7 @@ class ItemScrapr(object):
 		self.key_items       = tables[2]
 		'''
 
-	def get_items(self, tid, schema, category = 'main'):
+	def _get_items(self, tid, schema, category = 'main'):
 
 		# Actual item data starts 2 rows in, so just trim those off here
 		rows = self.tables[tid].find_all('tr')[2:]
@@ -86,14 +108,21 @@ class ItemScrapr(object):
 			i = Item(**kwargs)
 			items.append(i)
 
-
-
 		return items
 
+	def get_main_items(self):
+		schema = ['name', 'price', 'effect']
+		return self._get_items(0, schema, category = 'main')
+
+	def get_pokeball_items(self):
+		schema = ['name', 'price', 'effect']
+		return self._get_items(1, schema, category = 'pokeball')
+
+	def get_key_items(self):
+		schema = ['name', 'effect']
+		return self._get_items(2, schema, category = 'key')
 
 if __name__ == '__main__':
 	scraper = ItemScrapr()
-	tid = 1
-	schema = ['name', 'price', 'effect']
-	scraper.get_items(tid, schema, category = 'main')
-
+	key_items = scraper.get_main_items()
+	print(','.join([k.FSP_JSON() for k in key_items]))
