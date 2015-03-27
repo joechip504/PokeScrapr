@@ -1,10 +1,13 @@
 import requests
 import json
-from bs4 import BeautifulSoup, NavigableString
-from pprint import pprint
+import jsbeautifier
 import sys
 import time
 
+from bs4 import BeautifulSoup
+from pprint import pprint
+
+## TODO fix eevee, magikarp, gloom, 
 
 class PokeScrapr(object):
     '''Existing Pokemon APIs lack support for generation 1, so
@@ -78,15 +81,19 @@ class PokeScrapr(object):
         tables    = soup.find_all("table")
 
         # check for 'pre-evolution-moves' and skip them
-        table = tables[tid]
-        title = table.previous_sibling.previous_sibling.previous_sibling.previous_sibling
-        if (title.text == 'Pre-evolution moves'):
-            tid += 1
+        try:
+            table = tables[tid]
+            title = table.previous_sibling.previous_sibling.previous_sibling.previous_sibling
+            if (title.text == 'Pre-evolution moves'):
+                tid += 1
+
+        except:
+            return []
 
         # Some pokemon, like caterpie, have no hm/tm moves
         try:
             rows      = tables[tid].find_all('tr')
-        except:
+        except: 
             return []
 
 
@@ -110,7 +117,13 @@ class PokeScrapr(object):
         '''
 
         soup = self._get_pokedex_soup(pokemon)
-        sequence = soup.find_all('div', {'class': 'infocard-evo-list'})[0]
+        try:
+            sequence = soup.find_all('div', {'class': 'infocard-evo-list'})[0]
+
+        # Some pokemon (like farfetchd) have no evolution sequence
+        except:
+            return [[pokemon, "Undefined", "Undefined"]]
+
         pokemon_sequence = sequence.find_all('span', {'class' : 'infocard-tall'})
         evolution_info = sequence.find_all('span', {'class' : 'infocard-tall small'})
 
@@ -126,14 +139,14 @@ class PokeScrapr(object):
             evolution_mechanisms.append(
                 (e.br.text.strip().replace('(', '').replace(')', '')))
 
-        evolution_mechanisms.append("FULLY_EVOLVED")
+        evolution_mechanisms.append("Undefined")
 
         evolution_tuples = [[i,j] for i,j in zip(pokemon_names, evolution_mechanisms)]
 
         for i in range(len(evolution_tuples) - 1):
             evolution_tuples[i].append(pokemon_names[i+1])
 
-        evolution_tuples[-1].append("NONE")
+        evolution_tuples[-1].append("Undefined")
         return evolution_tuples
             
 
@@ -206,6 +219,11 @@ class PokeScrapr(object):
 
     def _format_moveset_for_FSP(self, moveset):
         updated_moves = [ {"level" : int(m[0]), "Move": m[1]} for m in moveset]
+
+        # quick hack to force double quotes instead of single quotes
+        updated_moves = '{}'.format(updated_moves)
+        updated_moves = jsbeautifier.beautify(updated_moves).replace("'", '"')               
+
         return updated_moves
 
     def get_all_data(self, pokemon):
@@ -225,13 +243,19 @@ class PokeScrapr(object):
         hm_moves             = self.get_moves(pokemon, moveset = "hm")
 
         # national_id, types, species, height, weight
-        for i in ['national_id', 'types', 'species', 'height', 'weight']:
+        for i in ['national_id', 'species', 'height', 'weight']:
             d[i] = pokedex_data[i]
 
         # break up height into feet, inches
         d['feet'] = d['height'][0]
         d['inches'] = d['height'][1]
 
+        # force double quotes in types
+        types = pokedex_data['types']
+        for i in range(len(types)):
+            types[i] = '"' + types[i] + '"'
+
+        d['types'] = ','.join(types)
 
         # hp, attack, defense, special_attack, special_defense, speed
         for i in ['hp', 'attack', 'defense', 'special_attack',
@@ -279,14 +303,14 @@ class PokeScrapr(object):
             "label": "{species}",
             "sprite": "water",
             "info": [
-                    "{pokedex_entry}""
-            ]
+                    "{pokedex_entry}"
+            ],
             "evolvesInto" : "{evolvesInto}",
             "evolvesVia" : "{evolvesVia}",
             "number": {national_id},
             "height": ["{feet}", "{inches}"],
             "weight": {weight},
-            "types": {types},
+            "types": [{types}],
             "HP": {hp}, 
             "Attack": {attack}, 
             "Defense": {defense},
@@ -301,16 +325,16 @@ class PokeScrapr(object):
         '''
 
         kwargs = self.get_all_data(pokemon)
-        return output.format(**kwargs).replace("'", '"')
+        output = output.format(**kwargs)
+        return jsbeautifier.beautify(output)
 
 if __name__ == '__main__':
     Scraper = PokeScrapr()
 
     
-    for pokemon in ["Jigglypuff", "Nidoran-m", "Nidoqueen"]:
+    for pokemon in ["Weepinbell"]:
         print(pokemon.upper())
-        pprint(Scraper.get_FSP_JSON(pokemon))
-        time.sleep(3)
+        print(Scraper.get_FSP_JSON(pokemon))
         
     #pprint(Scraper.get_pokedex_data("pikachu"))
     #pprint(Scraper.get_FSP_JSON("squirtle"))
