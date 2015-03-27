@@ -7,7 +7,7 @@ import time
 from bs4 import BeautifulSoup
 from pprint import pprint
 
-
+## TODO fix eevee, magikarp, gloom, 
 
 class PokeScrapr(object):
     '''Existing Pokemon APIs lack support for generation 1, so
@@ -93,7 +93,7 @@ class PokeScrapr(object):
         # Some pokemon, like caterpie, have no hm/tm moves
         try:
             rows      = tables[tid].find_all('tr')
-        except:
+        except: 
             return []
 
 
@@ -292,7 +292,7 @@ class PokeScrapr(object):
             "label": "{species}",
             "sprite": "water",
             "info": [
-                    "{pokedex_entry}""
+                    "{pokedex_entry}"
             ]
             "evolvesInto" : "{evolvesInto}",
             "evolvesVia" : "{evolvesVia}",

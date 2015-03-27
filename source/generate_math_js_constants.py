@@ -1,4 +1,5 @@
 from PokeScrapr import PokeScrapr
+import jsbeautifier
 import time
 
 ## TODO JS beautifier
@@ -6,20 +7,29 @@ import time
 
 scraper = PokeScrapr()
 
-errors = open('error-pokemon.txt', 'w')
+
+output = []
 
 with open('pokemon.txt') as f:
-	for line in f.readlines()[128:]:
+	for line in f.readlines()[:]:
 		pokemon = line.strip().capitalize()
 		print(pokemon)
 		
 		try:
-			print(scraper.get_FSP_JSON(pokemon))
-			time.sleep(1)
+			js = scraper.get_FSP_JSON(pokemon)
+			print(js)
+			output.append(js)
+			time.sleep(3)
 
 		except:
 			print("error - ", pokemon, ". sleeping for 5 sec")
 			time.sleep(5)
+
 			scraper = PokeScrapr()
-			print(scraper.get_FSP_JSON(pokemon))
-		
+			js = scraper.get_FSP_JSON(pokemon)
+			print(js)
+			output.append(js)	
+
+with open('pokemon-js', 'w') as f:
+	json = jsbeautifier.beautify(','.join(output))
+	f.write(json)
